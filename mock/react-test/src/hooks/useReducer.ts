@@ -1,32 +1,61 @@
-// useReducer manages state through explicit actions and a reducer function.
-// It is useful when state transitions are related, branching, or easier to test as pure logic.
-// Reducers must stay pure, and dispatching during render should be avoided in real components.
+// useReducer manages related state through explicit actions and a reducer function.
+// It is useful when one event changes several values or when transitions have branching rules.
+// Reducers must stay pure: calculate and return state without requests, timers, or mutations.
 import { useReducer } from "react";
 
-// Manages more complex state transitions via a reducer function
-// ((state, action) => newState), similar to Redux's pattern but local.
-
-type CounterState = {
-  count: number;
+type CheckoutState = {
+  email: string;
+  delivery: "standard" | "express";
+  promoCode: string;
+  discount: number;
+  error: string | null;
+  isSubmitting: boolean;
 };
 
-type CounterAction = {
-  type: "increment" | "decrement";
+type CheckoutAction =
+  | { type: "emailChanged"; email: string }
+  | { type: "deliveryChanged"; delivery: CheckoutState["delivery"] }
+  | { type: "promoApplied"; promoCode: string; discount: number }
+  | { type: "submitStarted" }
+  | { type: "submitFailed"; error: string }
+  | { type: "reset" };
+
+const initialState: CheckoutState = {
+  email: "",
+  delivery: "standard",
+  promoCode: "",
+  discount: 0,
+  error: null,
+  isSubmitting: false,
 };
 
-function reducer(state: CounterState, action: CounterAction): CounterState {
+function checkoutReducer(
+  state: CheckoutState,
+  action: CheckoutAction,
+): CheckoutState {
   switch (action.type) {
-    case "increment":
-      return { count: state.count + 1 };
-    case "decrement":
-      return { count: state.count - 1 };
+    case "emailChanged":
+      return { ...state, email: action.email, error: null };
+    case "deliveryChanged":
+      return { ...state, delivery: action.delivery };
+    case "promoApplied":
+      return {
+        ...state,
+        promoCode: action.promoCode,
+        discount: action.discount,
+        error: null,
+      };
+    case "submitStarted":
+      return { ...state, isSubmitting: true, error: null };
+    case "submitFailed":
+      return { ...state, isSubmitting: false, error: action.error };
+    case "reset":
+      return initialState;
     default:
       return state;
   }
 }
 
-export const useUpdate = () => {
-  const [state, dispatch] = useReducer(reducer, { count: 0 });
-  dispatch({ type: "increment" });
-  console.log({ state });
-};
+export function useCheckoutForm() {
+  return useReducer(checkoutReducer, initialState);
+}
